@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 
 const DEFAULT_URL = 'https://kanby.0xaa.workers.dev';
-const VERSION = '0.1.0';
+const VERSION = '0.2.0';
 const configPath = join(
   process.env.XDG_CONFIG_HOME || join(homedir(), '.config'),
   'kanby',
@@ -107,6 +107,37 @@ function taskLine(task) {
   return `${task.ref}\t${task.status.padEnd(8)}\t${owner.padEnd(18)}\t${task.title}`;
 }
 
+function checklistLines(criteria = []) {
+  return criteria.length
+    ? criteria
+        .map(
+          (criterion, index) =>
+            `${index + 1}. [${criterion.completed ? 'x' : ' '}] ${criterion.body}\t${criterion.id.slice(0, 8)}`,
+        )
+        .join('\n')
+    : 'No acceptance criteria';
+}
+
+function resolveCriterion(criteria, reference) {
+  if (/^[1-9]\d*$/.test(reference)) {
+    const criterion = criteria[Number(reference) - 1];
+    if (!criterion)
+      throw new Error(`Checklist item ${reference} is out of range`);
+    return criterion;
+  }
+  const matches = criteria.filter(
+    (criterion) =>
+      criterion.id === reference || criterion.id.startsWith(reference),
+  );
+  if (matches.length !== 1)
+    throw new Error(
+      matches.length
+        ? `Checklist item prefix ${reference} is ambiguous`
+        : `Checklist item ${reference} was not found`,
+    );
+  return matches[0];
+}
+
 function usage() {
   return `Kanby CLI
 
@@ -116,6 +147,10 @@ Usage:
   kanby project list [--json]
   kanby task list [--status ideas|building|shipped] [--json]
   kanby task get <ref> [--json]
+  kanby task checklist <ref> [--json]
+  kanby task checklist add <ref> <criterion>
+  kanby task checklist edit <ref> <item-number-or-id> <criterion>
+  kanby task checklist check|uncheck|remove <ref> <item-number-or-id>
   kanby task create <title> [--status <status>] [--note <text>]
   kanby task update <ref> [--title <title>] [--note <text>] [--status <status>] [--due <date>] [--tag <tag>]
   kanby task split <ref> <title> [<title> ...]
@@ -241,6 +276,41 @@ async function main() {
       }),
     });
     out(data, (item) => `Created ${taskLine(item)}`);
+    return;
+  }
+  if (command === 'checklist') {
+    const operations = new Set(['add', 'edit', 'check', 'uncheck', 'remove']);
+    if (!first) throw new Error('Task ref is required');
+    if (!operations.has(first)) {
+      const task = await api(`/api/v1/tasks?id=${encodeURIComponent(first)}`);
+      out(task.acceptanceCriteria ?? [], checklistLines);
+      return;
+    }
+    const reference = rest[0];
+    if (!reference) throw new Error('Task ref is required');
+    if (first === 'add') {
+      const body = rest.slice(1).join(' ').trim();
+      if (!body) throw new Error('Acceptance criterion is required');
+      const data = await mutate(reference, 'checklist.add', { body });
+      out(data.acceptanceCriteria ?? [], checklistLines);
+      return;
+    }
+    const itemReference = rest[1];
+    if (!itemReference)
+      throw new Error('Checklist item number or id is required');
+    const task = await api(`/api/v1/tasks?id=${encodeURIComponent(reference)}`);
+    const criterion = resolveCriterion(
+      task.acceptanceCriteria ?? [],
+      itemReference,
+    );
+    const extra = { criterionId: criterion.id };
+    if (first === 'edit') {
+      const body = rest.slice(2).join(' ').trim();
+      if (!body) throw new Error('Acceptance criterion is required');
+      extra.body = body;
+    }
+    const data = await mutate(reference, `checklist.${first}`, extra);
+    out(data.acceptanceCriteria ?? [], checklistLines);
     return;
   }
   if (!first) throw new Error('Task ref is required');

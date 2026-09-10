@@ -8,6 +8,12 @@ Set `KANBY_TOKEN` for agents and CI. `KANBY_URL` is optional and defaults to the
 | List project      | `kanby project list --json`                                                         |
 | List tasks        | `kanby task list [--status ideas\|building\|shipped] --json`                        |
 | Inspect task      | `kanby task get <ref> --json`                                                       |
+| List checklist    | `kanby task checklist <ref> --json`                                                 |
+| Add criterion     | `kanby task checklist add <ref> "<criterion>" --json`                               |
+| Edit criterion    | `kanby task checklist edit <ref> <number-or-id> "<criterion>" --json`               |
+| Check criterion   | `kanby task checklist check <ref> <number-or-id> --json`                            |
+| Reopen criterion  | `kanby task checklist uncheck <ref> <number-or-id> --json`                          |
+| Remove criterion  | `kanby task checklist remove <ref> <number-or-id> --json`                           |
 | Create task       | `kanby task create "<title>" [--status ideas] [--note "..."] --json`                |
 | Edit task         | `kanby task update <ref> [--title "..."] [--note "..."] [--status building] --json` |
 | Split into tasks  | `kanby task split <ref> "<child one>" "<child two>" --json`                         |
@@ -19,6 +25,8 @@ Set `KANBY_TOKEN` for agents and CI. `KANBY_URL` is optional and defaults to the
 | Release           | `kanby task release <ref> --json`                                                   |
 
 Task refs are the short prefixes returned by list/create. Mutations accept `--idempotency-key <stable-key>`.
+
+Checklist item numbers are one-based and match the current display order; item IDs and unambiguous ID prefixes are also accepted. Re-list after concurrent changes. Acceptance conditions belong in the structured checklist, not in the task description, and must only be checked when supporting evidence exists.
 
 For automatic Pull Request association, put `Kanby-Task: <ref>` on its own line in the PR body or name the branch `kanby/<ref>-description`. Project owners can disable this rule in Kanby Settings; `task link` remains the explicit fallback.
 

@@ -5,7 +5,7 @@ Use Kanby from a terminal, CI job, or coding agent. The public repository ships 
 ## Install the CLI
 
 ```bash
-npm install -g github:AmazingAng/kanby-cli#v0.1.0
+npm install -g github:AmazingAng/kanby-cli#v0.2.0
 ```
 
 Create a project Agent Token in **Kanby → Settings → CLI 与 Coding Agent**. For agents and CI, expose it through the environment:
@@ -33,6 +33,8 @@ The skill guides coding agents through listing work, claiming a task, reporting 
 kanby task list
 kanby task claim <ref> --lease 15
 kanby task get <ref>
+kanby task checklist add <ref> "Tests pass"
+kanby task checklist check <ref> 1
 kanby task progress <ref> "Implemented the first working slice"
 kanby task complete <ref> --message "Tests pass and PR is ready"
 ```
